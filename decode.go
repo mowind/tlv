@@ -4,10 +4,16 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
-	"strconv"
+)
+
+var (
+	errIndefiniteLength = errors.New("intefinite length is not supported")
+	errInvalidLength    = errors.New("invalid length")
 )
 
 func Unmarshal(b []byte, v interface{}) error {
@@ -80,10 +86,11 @@ func decodeValue(b []byte, v interface{}) error {
 				return errors.New("field " + fieldType.Name + " need tag `tlv`")
 			}
 
-			tagVal, err := strconv.Atoi(tag)
+			tagHex, err := hex.DecodeString(tag)
 			if err != nil {
 				return fmt.Errorf("invalid tlv tag \"%s\", need to be decimal number", tag)
 			}
+			tagVal := int(big.NewInt(0).SetBytes(tagHex).Int64())
 
 			if len(tlvFragment[tagVal]) == 0 {
 				continue
@@ -129,14 +136,17 @@ func parseTLV(b []byte) (fragments, error) {
 	tlvFragment := make(fragments)
 	buffer := bytes.NewBuffer(b)
 
-	var tag uint16
-	var length uint16
+	var tag int
+	var length int
+	var err error
 	for {
-		if err := binary.Read(buffer, binary.BigEndian, &tag); err != nil {
-			fmt.Printf("Binary Read error: %v", err)
+		tag, err = parseTag(buffer)
+		if err != nil {
+			return tlvFragment, err
 		}
-		if err := binary.Read(buffer, binary.BigEndian, &length); err != nil {
-			fmt.Printf("Binary Read error: %v", err)
+		length, err = parseLen(buffer)
+		if err != nil {
+			return tlvFragment, err
 		}
 		value := make([]byte, length)
 		if _, err := buffer.Read(value); err != nil {
@@ -148,4 +158,49 @@ func parseTLV(b []byte) (fragments, error) {
 		}
 	}
 	return tlvFragment, nil
+}
+
+func parseTag(buf *bytes.Buffer) (int, error) {
+	b := make([]byte, 1)
+	if err := binary.Read(buf, binary.BigEndian, b); err != nil {
+		return 0, err
+	}
+
+	tag := int(b[0])
+	if b[0]&0x1F == 0x1F { //it's a two byte tag
+		tag <<= 8
+
+		if err := binary.Read(buf, binary.BigEndian, b); err != nil {
+			return 0, err
+		}
+		tag |= int(b[0])
+	}
+	return tag, nil
+}
+
+func parseLen(buf *bytes.Buffer) (int, error) {
+	b := make([]byte, 1)
+
+	if err := binary.Read(buf, binary.BigEndian, b); err != nil {
+		return 0, err
+	}
+
+	if b[0] == 0x80 {
+		return 0, errIndefiniteLength
+	}
+
+	if b[0]&0x80 == 0 {
+		return int(b[0]), nil
+	}
+
+	nb := int(b[0] & 0x7f)
+	if nb > 4 {
+		return 0, errInvalidLength
+	}
+
+	lenb := make([]byte, 4)
+	if err := binary.Read(buf, binary.BigEndian, lenb[4-nb:]); err != nil {
+		return 0, err
+	}
+	return int(binary.BigEndian.Uint32(lenb)), nil
 }

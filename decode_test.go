@@ -17,56 +17,56 @@ func TestUnmarshal(t *testing.T) {
 		{
 			name: "int64",
 			instance: struct {
-				Value int64 `tlv:"30"`
+				Value int64 `tlv:"1E"`
 			}{Value: 32324},
-			inputHex: "001E00080000000000007E44",
+			inputHex: "1E080000000000007E44",
 		},
 		{
 			name: "int32",
 			instance: struct {
-				Value int32 `tlv:"31"`
+				Value int32 `tlv:"2F"`
 			}{Value: 32324},
-			inputHex: "001F000400007E44",
+			inputHex: "2F0400007E44",
 		},
 		{
 			name: "int16",
 			instance: struct {
-				Value int16 `tlv:"32"`
+				Value int16 `tlv:"20"`
 			}{Value: 32324},
-			inputHex: "002000027E44",
+			inputHex: "20027E44",
 		},
 		{
 			name: "int8",
 			instance: struct {
-				Value int8 `tlv:"33"`
+				Value int8 `tlv:"21"`
 			}{Value: 68},
-			inputHex: "0021000144",
+			inputHex: "210144",
 		},
 		{
 			name: "slice of struct",
 			instance: struct {
 				List []struct {
-					Name     []byte `tlv:"20"`
-					Sequence uint16 `tlv:"40"`
-				} `tlv:"80"`
+					Name     []byte `tlv:"14"`
+					Sequence uint16 `tlv:"28"`
+				} `tlv:"50"`
 			}{
 				List: []struct {
-					Name     []byte `tlv:"20"`
-					Sequence uint16 `tlv:"40"`
+					Name     []byte `tlv:"14"`
+					Sequence uint16 `tlv:"28"`
 				}{
 					{Name: []byte("Hello"), Sequence: 1},
 					{Name: []byte("World"), Sequence: 2},
 					{Name: []byte("free5gc"), Sequence: 3},
 				},
 			},
-			inputHex: "0050000F0014000548656C6C6F002800020001" +
-				"0050000F00140005576F726C64002800020002" +
-				"005000110014000766726565356763002800020003",
+			inputHex: "500B140548656C6C6F28020001" +
+				"500B1405576F726C6428020002" +
+				"500D14076672656535676328020003",
 		},
 		{
 			name: "slice of binary",
 			instance: struct {
-				List []BinaryMarshalTest `tlv:"123"`
+				List []BinaryMarshalTest `tlv:"7B"`
 			}{
 				List: []BinaryMarshalTest{
 					{
@@ -80,7 +80,7 @@ func TestUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			inputHex: "007B000431313030007B000431323030007B000433323434",
+			inputHex: "7B04313130307B04313230307B0433323434",
 		},
 	}
 
